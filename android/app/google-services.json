@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "653686733165",
+    "project_id": "announcement-app-69f95",
+    "storage_bucket": "announcement-app-69f95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653686733165:android:301f3bda0b6375b4b0c264",
+        "android_client_info": {
+          "package_name": "com.pixslide.announcement_app.announcement_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIGmUFpmU54loI8mbw559saAnJIjCtyQk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
