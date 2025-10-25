@@ -1,21 +1,22 @@
+// student_announcements_page.dart
 // ignore_for_file: use_super_parameters
-import 'package:announcement_app/auth_screen/controller/auth_controller.dart';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-import 'controller/lecturer_announcement_view_screen.dart';
-import 'model_class/announcement_model.dart';
-import 'post_announcement/post_announcement_screen.dart';
+import '../../auth_screen/controller/auth_controller.dart';
+import '../lecturer_screen/model_class/announcement_model.dart';
+import 'controller/student_view_controller.dart';
+import 'sub_pages/announcement_details_page.dart';
 
-class LecturerAnnouncementsPage extends StatelessWidget {
-  final controller = Get.put(LecturerViewAnnouncementController());
+class StudentAnnouncementsPage extends StatelessWidget {
+  final controller = Get.put(StudentViewController());
   final authController = Get.put(AuthController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         actions:[
           IconButton(
@@ -24,17 +25,6 @@ class LecturerAnnouncementsPage extends StatelessWidget {
               Get.defaultDialog(
                 backgroundColor: Colors.teal.shade200,
                 actions: [
-                  OutlinedButton(
-                    onPressed: () => Get.back(),
-                    child: Text(
-                      'Close',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w400
-                      ),
-                    )
-                  ),
                   ElevatedButton(
                     onPressed: () async => await authController.signOutUser(), 
                     child: Text(
@@ -56,82 +46,81 @@ class LecturerAnnouncementsPage extends StatelessWidget {
                     fontWeight: FontWeight.w500
                   ),
                 )
-
               );
             },
           )
         ],
-        title: const Text(
-          'My Announcements',
+        title: Text(
+          'Announcements',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 23,
-            fontWeight: FontWeight.w500
+            fontSize: 25,
+            fontWeight: FontWeight.w600
           ),
         ),
         backgroundColor: Colors.teal,
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator(color: Colors.grey,));
+          return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.myAnnouncements.isEmpty) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            spacing: 15,
-            children: [
-              Icon(
-                Icons.notifications_none_rounded, color: Colors.grey,size: 70,
-              ),
-              const Text(
-                'Post announcements to see them here',
-                softWrap: true,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w400
+        if (controller.allAnnouncements.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.notifications_none, size: 60, color: Colors.grey),
+                SizedBox(height: 20),
+                Text(
+                  'No announcements available.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         }
 
         return ListView.builder(
-          itemCount: controller.myAnnouncements.length,
+          padding: const EdgeInsets.all(8.0),
+          itemCount: controller.allAnnouncements.length,
           itemBuilder: (context, index) {
-            final announcement = controller.myAnnouncements[index];
-            return AnnouncementCard(announcement: announcement);
+            final announcement = controller.allAnnouncements[index];
+            return GestureDetector(
+              onTap: () {
+                  // Navigate to the detailed announcement screen, passing the announcement object
+                  Get.to(() => AnnouncementDetailsPage (announcement: announcement));
+                },
+              child: AnnouncementCard(
+                announcement: announcement,
+                onDownload: (file) => controller.downloadFile(file),
+              ),
+            );
           },
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Get.to(() => LecturerPostAnnouncementPage()),
-        backgroundColor: Colors.teal,
-        child: Icon(Icons.add_rounded,color: Colors.white,size: 25,),
-      ),
     );
   }
 }
 
 class AnnouncementCard extends StatelessWidget {
   final Announcement announcement;
+  final Function(AnnouncementFile) onDownload;
 
-  const AnnouncementCard({Key? key, required this.announcement}) : super(key: key);
+  const AnnouncementCard({Key? key, required this.announcement, required this.onDownload}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('EEE, m/d/y');
 
     return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.all(12.0),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
             width: Get.width,
             height: Get.height * 0.08,
             decoration: BoxDecoration(
@@ -199,58 +188,51 @@ class AnnouncementCard extends StatelessWidget {
                       fontWeight: FontWeight.w400
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (announcement.files.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      spacing: 3,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Icon(Icons.attachment_rounded,size: 16,color: Colors.black,),
-                        const Text(
-                          'Attachments', 
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 15, 
-                            fontWeight: FontWeight.w500
-                          ),
-                        ),
-                      ],
-                    ),
-                    ...announcement.files.map((file) => Padding(
-                      padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(height: 5,),
-                          Icon(Icons.file_present_outlined,size: 16,color: Colors.black,),
-                          Flexible(
-                            child: Text(
-                              file.name,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 15, 
-                                fontWeight: FontWeight.w400,
-                                overflow: TextOverflow.ellipsis,
-                                
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 5,),
-                        ],
-                      ),
-                    )),
-                  ],
                 ],
               ),
             ),
           ),
-        ],
-      ),
+            if (announcement.files.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0 , right: 4.0),
+                child: const Divider(height: 24),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0, right: 4.0),
+                child: const Text(
+                  'Attached Files:',
+                  style: TextStyle(fontWeight: FontWeight.bold,fontStyle: FontStyle.italic, color: Colors.black, fontSize: 18),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Use a Column for a vertical list of files
+              ...announcement.files.map((file) => Padding(
+                padding: const EdgeInsets.only(left: 8.0, right: 4.0),
+                child: FileDownloadTile(
+                  file: file,
+                  onTap: () => onDownload(file),
+                ),
+              )),
+            ],
+          ],
+        ),
+      );
+  }
+}
+
+class FileDownloadTile extends StatelessWidget {
+  final AnnouncementFile file;
+  final VoidCallback onTap;
+
+  const FileDownloadTile({Key? key, required this.file, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.download_for_offline, color: Colors.green),
+      title: Text(file.name, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.black, fontSize: 18),),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
   }
 }

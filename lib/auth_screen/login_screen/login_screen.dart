@@ -11,8 +11,6 @@ class LoginScreen extends StatelessWidget {
 
   final _passwordController = TextEditingController();
 
-  final _role = 'select role'.obs;
-
   final AuthController _authController = Get.put(AuthController());
 
   
@@ -63,17 +61,6 @@ class LoginScreen extends StatelessWidget {
                   fontWeight: FontWeight.w400
                 ),
               ),
-              Obx(() => DropdownButton<String>(
-                dropdownColor: Colors.white,
-                value: _role.value,
-                items: ['select role','student', 'lecturer']
-                    .map((role) => DropdownMenuItem(
-                          value: role,
-                          child: Text(role.toUpperCase()),
-                        ))
-                    .toList(),
-                onChanged: (value) => _role.value = value!,
-              )),
             ],
           ),
           SizedBox(height: 20),
@@ -88,7 +75,7 @@ class LoginScreen extends StatelessWidget {
                         Get.snackbar('Error', 'No textfield detail should be empty', backgroundColor: Colors.red,colorText: Colors.white);
                           return;
                       }
-                      _authController.signIn(_emailController.text, _passwordController.text);
+                      _authController.signInUser(email: _emailController.text, password: _passwordController.text);
                     },
                     child: Text(
                     'Login',

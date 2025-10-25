@@ -39,7 +39,7 @@ AlertDialog signOutDialog() {
                   ElevatedButton(
                     style: ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.red)),
                     onPressed: () {
-                      authController.signOut();
+                      authController.signOutUser();
                       Get.offAll(()=> AuthScreen());
                     },
                     child: Text(

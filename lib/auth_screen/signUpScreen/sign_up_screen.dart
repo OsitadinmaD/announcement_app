@@ -29,16 +29,6 @@ class SignUpScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         spacing: 5,
         children: [
-          Obx(() => Text(
-              _authController.displayProceed.value ? 'Proceed to Login' : 'Fill in details to sign up',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 25,
-                fontWeight: FontWeight.w600,
-                wordSpacing: 1
-              ),
-            ),
-          ),
           TextField(
             cursorColor: Colors.black,
             controller: _nameController,
@@ -110,7 +100,13 @@ class SignUpScreen extends StatelessWidget {
                         Get.snackbar('Error', 'No textfield detail should be empty', backgroundColor: Colors.red,colorText: Colors.white);
                         return;
                        }
-                    _authController.signUp(_emailController.text, _passwordController.text, _role.value, _nameController.text, _regNumberController.text);
+                    _authController.signUpUser(
+                      email: _emailController.text,
+                      fullName: _nameController.text,
+                      password: _passwordController.text,
+                      idNumber: _regNumberController.text,
+                      role: _role.value
+                    );
                     
                   },
                   child: Text(

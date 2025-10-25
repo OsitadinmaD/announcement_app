@@ -1,79 +1,116 @@
-import 'package:flutter/material.dart';
+// auth_controller.dart
+import 'package:announcement_app/helpers/snackbar_helpers.dart';
 import 'package:get/get.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../in_app_screens/lecturer_screen/lecturer_screen.dart';
+import '../../in_app_screens/student_screen.dart/student_home.dart';
+import '../authenticatio_screen/auth_screen.dart';
 
 class AuthController extends GetxController {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  var userRole = ''.obs;
+  final supabase = Supabase.instance.client;
+
   var isLoading = false.obs;
-  var displayProceed = false.obs;
+  var errorMessage = ''.obs;
 
-  Future<void> signIn(String email, String password) async {
-    try {
-      isLoading.value = true;
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      await _fetchUserRole();
-      _redirectBasedOnRole();
-    } catch (e) {
-      Get.snackbar('Error', 'Login failed: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  // Sign-up logic
+  Future<void> signUpUser({
+    required String email,
+    required String password,
+    required String fullName,
+    required String idNumber,
+    required String role,
+  }) async {
+    isLoading.value = true;
+    errorMessage.value = '';
 
-  Future<void> signUp(String email, String password, String role, String regNumber, String name) async {
     try {
-      isLoading.value = true;
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
+      // 1. Create the user in Supabase Auth
+      final AuthResponse authResponse = await supabase.auth.signUp(
         email: email,
         password: password,
       );
-      
-      await _firestore.collection('users').doc(result.user!.uid).set({
-        'email': email,
-        'name': name,
-        'regNumber': regNumber,
-        'role': role,
-        'createdAt': FieldValue.serverTimestamp(),
-      }).whenComplete(() {
-        displayProceed.value = true; 
-        Get.snackbar(
-          'Success', 
-          'Account Created Successfully',
-          backgroundColor: Colors.green,
-          colorText: Colors.white
-        );
-      },);
-      userRole.value = role;
+
+      final user = authResponse.user;
+
+      if (user != null) {
+        // 2. Insert the user's details into the 'users' table
+        await supabase.from('users').insert({
+          'id': user.id,
+          'full_name': fullName,
+          'id_number': idNumber,
+          'role': role,
+        });
+        snackbarSuccess(title: 'Success', message: 'Sign-up successful! Please check your email to confirm your account.');
+        //Get.offAll(() => LoginScreen());
+      } else {
+        errorMessage.value = 'Sign-up failed.';
+      }
+    } on AuthException catch (e) {
+      errorMessage.value = e.message ;
+      snackbarError(title: 'Error', message: errorMessage.value);
     } catch (e) {
-      Get.snackbar('Error', 'Signup failed: ${e.toString()}',backgroundColor: Colors.red, colorText: Colors.white);
+      errorMessage.value = 'An unexpected error occurred: $e';
+      snackbarError(title: 'Error', message: errorMessage.value);
     } finally {
       isLoading.value = false;
-      displayProceed.value = false;
     }
   }
 
-  Future<void> _fetchUserRole() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      DocumentSnapshot doc = 
-          await _firestore.collection('users').doc(user.uid).get();
-      userRole.value = doc['role'] ?? '';
+  // Sign-in logic with role-based routing
+  Future<void> signInUser({
+    required String email,
+    required String password,
+  }) async {
+    isLoading.value = true;
+    errorMessage.value = '';
+
+    try {
+      final AuthResponse authResponse = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = authResponse.user;
+      
+      if (user != null) {
+        // Fetch the user's role from the 'users' table
+        final List<Map<String, dynamic>> response = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id);
+
+        //check if the response is empty before accessing the role
+        if(response.isNotEmpty){
+          final role = response.first['role'];
+          if (role == 'lecturer') {
+            Get.offAll(() => LecturerAnnouncementsPage());
+          } else {
+            Get.offAll(() => StudentAnnouncementsPage());
+          }
+          snackbarSuccess(title: 'Success', message: 'Signed in successfully as a $role.');
+        } else {
+          //Handle case where user has no profile
+          errorMessage.value = 'User profile not found.';
+          snackbarError(title: 'Error', message: errorMessage.value);
+        }
+        
+      }
+    } on AuthException catch (e) {
+      errorMessage.value = e.message;
+      snackbarError(title: 'Error', message: errorMessage.value);
+    } catch (e) {
+      errorMessage.value = 'An unexpected error occurred: $e';
+      snackbarError(title: 'Error', message: errorMessage.value);
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  void _redirectBasedOnRole() {
-    if (userRole.value == 'lecturer') {
-      Get.offAllNamed('/lecturer');
-    } else {
-      Get.offAllNamed('/student');
-    }
-  }
-
-  void signOut() async {
-    await _auth.signOut();
-    Get.offAllNamed('/');
+  // Sign-out logic
+  Future<void> signOutUser() async {
+    await supabase.auth.signOut();
+    Get.offAll(() => AuthScreen());
+    snackbarSuccess(title: 'Info', message: 'You have been signed out.');
   }
 }
